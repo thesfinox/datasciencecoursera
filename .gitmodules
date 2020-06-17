@@ -1,3 +1,6 @@
 [submodule "r_programming/ProgrammingAssignment2"]
 	path = r_programming/ProgrammingAssignment2
 	url = git@github.com:thesfinox/ProgrammingAssignment2.git
+[submodule "exploratory_data_analysis/ExData_Plotting1"]
+	path = exploratory_data_analysis/ExData_Plotting1
+	url = git@github.com:thesfinox/ExData_Plotting1.git
