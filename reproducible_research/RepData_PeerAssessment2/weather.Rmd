@@ -1,0 +1,290 @@
+---
+title: "Impact of Severe Weather Events on US Public Health and Economy"
+author: "Riccardo Finotello"
+date: "18 June 2020"
+output:
+    html_document:
+        keep_md: yes
+    pdf_document:
+        default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synopsis
+
+Severe weather conditions and events can have a deep impact on public health with
+an increase in fatalities and injuries as well as on economy, causing temporary
+and permanent damage. With this analysis we explore the NOAA Storm Database
+containing data on atmospheric events from 1950 to 2011 in the US and we try to
+determine the aspects most harmful to population health and economy.
+
+## Data Processing
+
+The focus of this section is to download, load and prepare the data for the
+analysis. We first download the file, available at
+[this URL](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2):
+
+```{r download, cache = TRUE}
+file.url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+file.out <- "data.csv.bz2"
+if(!file.exists(file.out)) {download.file(file.url, file.out, method = "curl")}
+```
+
+We read the full file using `read.csv` (which can read _bz2_ compressed
+files) and then we convert it to a `data.table`:
+
+```{r read.full, cache = TRUE}
+library(data.table)
+data <- read.csv(file.out, header = TRUE, stringsAsFactors = FALSE)
+data <- data.table(data)
+```
+
+First of all we notice the dimensions of the dataset, since it will directly
+influence processing time for every transformation we will perform:
+
+```{r dim, cache = TRUE}
+print(paste("No. of samples:", dim(data)[1]))
+print(paste("No. of columns:", dim(data)[2]))
+```
+
+The dataset is therefore made of `r dim(data)[2]` columns named:
+
+```{r col.name, cache = TRUE}
+colnames(data)
+```
+
+whose classes are:
+
+```{r col.class, cache = TRUE}
+col.class <- sapply(data, class)
+```
+
+In this analysis we wil be particularly focused on **public health** related
+consequences and **economic** damage per event type. In order to speed up some
+computations we restrict the data we use to the **date** of the occurrence (the
+column `BGN_DATE`), the **event type** (`EVTYPE`), fatalities and injuries
+(`FATALITIES` and `INJURIES` respectively), property and crop damage (`PROPDMG`
+and `CROPDMG`, each expressed in **billion** of US$):
+
+```{r col.sel, cache = TRUE}
+data.analysis <- data[, c("BGN_DATE",
+                          "EVTYPE",
+                          "FATALITIES",
+                          "INJURIES", 
+                          "PROPDMG",
+                          "CROPDMG"
+                         )
+                     ]
+```
+
+We then transform the date column into a `Date` class and rename the columns:
+
+```{r col.transf, cache = TRUE}
+data.analysis[, BGN_DATE := as.Date(BGN_DATE, "%m/%d/%Y %H:%M:%S"),]
+colnames(data.analysis) <- make.names(c("Date",
+                                        "Type",
+                                        "Fatalities",
+                                        "Injuries",
+                                        "Property.damage",
+                                        "Crop.damage"
+                                       )
+                                      )
+```
+
+The new dataset has now `r dim(data.analysis)[2]` columns whose classes are:
+
+```{r col.class.analysis, cache = TRUE}
+col.class.analysis <- sapply(data.analysis, class)
+col.class.analysis
+```
+
+The tidied database can now be used for the analysis. We first check the
+presence of missing values:
+
+```{r na.val, cache = TRUE}
+for(column in colnames(data.analysis)) {
+    na.val = sum(as.numeric(is.na(column)))
+    print(paste("Missing values in ", column, ": ", na.val, sep = ""))
+}
+```
+
+We can therefore provide a summary of the dataset without worrying about any
+strategy to replace missing values:
+
+```{r summary, cache = TRUE}
+summary(data.analysis)
+```
+
+We also provide the plot of the collected data per year to establish the
+significance of the study:
+
+```{r n.events, cache = TRUE, fig.cap = "Reported events from 1950 to 2011"}
+library(ggplot2)
+n.events <- data.analysis[, .N, by = year(Date)] # count the events per year
+g <- ggplot(data = n.events, aes(x = year, y = N))
+g + geom_bar(stat = "identity") +
+    xlab("year") +
+    ylab("reported events") +
+    ggtitle("Time Evolution of Reported Atmospheric Events in the US")
+```
+
+We see that the number of reported events has grown in time most probably due to
+more rigorous records and time series. This will clearly affect the results of
+the analysis.
+
+## Results
+
+This section is focused on results. We provide a panoramic view on what had the
+largest impact on public health and economy using the previously introduced
+dataset.
+
+### Outcome on Public Health
+
+From the data, we can recover the total amount of fatalities and injuries
+grouped by the type of atmospheric event:
+
+```{r event, cache = TRUE}
+data.type <- data.analysis[, .(Total.fatalities = sum(Fatalities),
+                               Total.injuries   = sum(Injuries)
+                              ),
+                           by = Type
+                          ]
+
+# other than the total amount, we add the percentage of fatalities and injuries
+data.type[, Perc.fatalities := Total.fatalities / sum(Total.fatalities)]
+data.type[, Perc.injuries   := Total.injuries / sum(Total.injuries)]
+```
+
+We can then investigate the 10 most influencial causes of deaths and damage to
+people:
+
+```{r event.ordered, cache = TRUE}
+# order by percentage
+data.fatalities <- data.type[order(-data.type$Perc.fatalities),]
+data.injuries   <- data.type[order(-data.type$Perc.injuries),]
+```
+
+The ordered datasets can themselves deliver a pretty good summary of the
+situation in terms of fatalities:
+
+```{r event.fatalities, cache = TRUE}
+data.fatalities[1:10, .(Type, Total.fatalities)]
+```
+
+and injuries:
+
+```{r event.injuries, cache = TRUE}
+data.injuries[1:10, .(Type, Total.injuries)]
+```
+
+We can the plot the results:
+
+```{r event.plots, cache = TRUE, fig.cap = "Casualties and injuries due to severe weather conditions from 1950 to 2011 in the US"}
+# create the plots
+library(gridExtra)
+g1 <- ggplot(data = data.fatalities[1:10,], aes(x = Type, y = Perc.fatalities)) +
+      geom_bar(stat = "identity") +
+      xlab("") +
+      ylab("Fraction of fatalities on total no.") +
+      scale_x_discrete(limits = data.fatalities$Type[1:10]) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g2 <- ggplot(data = data.injuries[1:10,], aes(x = Type, y = Perc.injuries)) +
+      geom_bar(stat = "identity") +
+      xlab("") +
+      ylab("Fraction of injuries on total no.") +
+      scale_x_discrete(limits = data.injuries$Type[1:10]) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+grid.arrange(g1, g2, ncol = 2)
+```
+
+It seems therefore that across the US, the largest impact on public health was
+due to tornado events (and wind-related reports) with a minor component
+correlated with excessive heat and floods.
+
+### Impact on Economy
+
+The same kind of analysis can be performed on the economic consequences of
+severe weather conditions. In this case we analyse data on **property** and
+**crop** damage:
+
+```{r event2, cache = TRUE}
+data.type2 <- data.analysis[, .(Total.property.damage = sum(Property.damage),
+                                Total.crop.damage     = sum(Crop.damage)
+                               ),
+                            by = Type
+                           ]
+
+# other than the total amount, we add the percentage of property and crop damage
+data.type2[, Perc.property.damage := Total.property.damage / sum(Total.property.damage)]
+data.type2[, Perc.crop.damage     := Total.crop.damage / sum(Total.crop.damage)]
+```
+
+As before, we rank the 10 most important causes of damage and plot the results:
+
+```{r event2.ordered, cache = TRUE}
+# order by percentage
+data.property <- data.type2[order(-data.type2$Total.property.damage),]
+data.crop     <- data.type2[order(-data.type2$Total.crop.damage),]
+```
+
+which can already be a good metric of the analysis in terms of property
+damage (in billions of US$):
+
+```{r event2.property, cache = TRUE}
+data.property[1:10, .(Type, Total.property.damage)]
+```
+
+and crop damage (in billions of US$):
+
+```{r event.crop, cache = TRUE}
+data.crop[1:10, .(Type, Total.crop.damage)]
+```
+
+Another interesting detail can be the fraction of the cost of weather factors
+with respect to the top element (i.e. normalised to the top cause of expenses)
+for property damage:
+
+```{r event2.property.norm, cache = TRUE}
+data.property[1:10, .(Type, Perc.cost = Total.property.damage / data.property$Total.property.damage[1])]
+```
+
+and crop damage:
+
+```{r event2.norm, cache = TRUE}
+data.crop[1:10, .(Type, Perc.cost = Total.crop.damage / data.crop$Total.crop.damage[1])]
+```
+
+We finally plot the results:
+
+```{r event2.plots, cache = TRUE, fig.cap = "Property and crop damage due to severe weather conditions from 1950 to 2011 in the US"}
+# create the plots
+g1 <- ggplot(data = data.property[1:10,], aes(x = Type, y = Total.property.damage)) +
+      geom_bar(stat = "identity") +
+      xlab("") +
+      ylab("Property damage [billion of US$]") +
+      scale_x_discrete(limits = data.property$Type[1:10]) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g2 <- ggplot(data = data.crop[1:10,], aes(x = Type, y = Total.crop.damage)) +
+      geom_bar(stat = "identity") +
+      xlab("") +
+      ylab("Crop damage [billion of US$]") +
+      scale_x_discrete(limits = data.crop$Type[1:10]) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+grid.arrange(g1, g2, ncol = 2)
+```
+
+It seems therefore that tornado events are again responsible for a large part of
+the damage to properties, while the floods and hail have definitely a larger
+impact on agricultural-related damage.
+
+## Conclusions
+
+The study is definitely not conclusive, but it may suggest that tornado and high
+speed winds play a central role in producing damage and public health issues,
+while most other factors have definitely more marginal parts. In terms of crop
+damage hail and heavy rain leading to floods seem to be the cause of most of the
+damage, leading the US government to spend more than threetimes the money for
+hail than for floods.
