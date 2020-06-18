@@ -4,3 +4,6 @@
 [submodule "exploratory_data_analysis/ExData_Plotting1"]
 	path = exploratory_data_analysis/ExData_Plotting1
 	url = git@github.com:thesfinox/ExData_Plotting1.git
+[submodule "reproducible_research/RepData_PeerAssessment1"]
+	path = reproducible_research/RepData_PeerAssessment1
+	url = git@github.com:thesfinox/RepData_PeerAssessment1.git
