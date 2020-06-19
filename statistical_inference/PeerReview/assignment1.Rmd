@@ -1,0 +1,136 @@
+---
+title: "Central Limit Theorem and the Exponential Distribution"
+author: "Riccardo Finotello"
+date: "19 June 2020"
+output:
+  pdf_document:
+    default
+  html_document:
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+We consider the exponential distribution and compare it with the Central Limit
+Theorem (CLT): we perform several simulations to extract samples and average a
+number of them to show that the distribution of the mean is approximately a
+normal distribution.
+
+## Simulations
+
+In this simulation we will use exponential distributions with `lambda = 0.2`
+(the _rate_ parameter):
+
+```{r par.rate}
+lambda <- 0.2
+```
+
+We will then define the number of exponentials simulating draws from the
+distribution:
+
+```{r par.sim}
+n.exp <- 40   # no. of exponentials
+n.sim <- 1000 # no. of simulations
+```
+
+We then set the seed for reproducible results:
+
+```{r seed}
+set.seed(42)
+```
+
+We then proceed to the simulation of the distributions:
+
+```{r sim}
+means <- NULL
+for (i in 1 : n.sim) {means = c(means, mean(rexp(n = n.exp, rate = lambda)))}
+```
+
+As a reference we also consider 1000 samples coming from one of the
+distributions. Instead of `r print(n.sim)` distributions of `r print(n.exp)`
+samples, we consider one distribution with `r print(n.sim)` samples:
+
+```{r dist}
+exp.dist <- rexp(n = n.sim, rate = lambda)
+```
+
+We then plot the comparison as a preliminary graphic showing the key differences
+of the distributions in Figure \ref{fig:diff}.
+
+```{r comp, fig.cap = "\\label{fig:diff}Difference between the distributions of 1000 exponential distribution holding 40 samples and one distribution with 1000 samples.", echo = FALSE}
+par(mfrow = c(1,2))
+hist(means, xlab = "Means of the distros", main = "Avg. of 1000 distributions")
+hist(exp.dist, xlab = "Samples", main = "Exponential distribution")
+```
+
+## Sample Mean and Theoretical Mean
+
+We now consider the comparison between the population mean and the expected
+value of the estimator for an exponential distribution:
+
+```{r means}
+mean.pop <- mean(means)
+mean.exp <- 1 / lambda
+
+print(paste("Population mean:", round(mean.pop,3)))
+print(paste("Expected mean:", mean.exp))
+```
+
+The results reflect the prediction of the CLT: the distribution of the averages
+will result in a normal distribution centred in the expected value of the mean.
+
+## Sample Variance and Theoretical Variance
+
+We can then proceed and perform the same analysis for the standard deviation of
+the population and the expected estimator:
+
+```{r sd}
+sd.pop <- sd(means)
+sd.exp <- 1 / lambda
+
+print(paste("Population standard deviation:", round(sd.pop,3)))
+print(paste("Exponential standard deviation:", sd.exp))
+```
+
+The difference in the values should not be regarded as worrisome: the CLT
+ensures that the distribution of the averages tends to a normal distribution
+centred in the expected value of the mean and a standard deviation equal to the
+standard error (i.e. $\sigma = \frac{s}{\sqrt{n}}$, where $\sigma$ is the
+standard error, $s$ is the population standard deviation and $n$ is the number
+of degrees of freedom in the distribution):
+
+```{r vars.std}
+sd.err <- sd.exp / sqrt(n.exp)
+
+print(paste("Population standard deviation:", round(sd.pop,3)))
+print(paste("Standard error:", round(sd.err,3)))
+```
+
+Again we then have "experimental" evidence of the validity of the CLT, since the
+population mean and the standard error associated to the normal distribution of
+the averages are extremely close.
+
+## Distribution
+
+In this last section we provide a visual reference of the compatibility of the
+distribution of the averages with a normal distribution. In fact such property
+can be immediately visualised in the histogram in Figure \ref{fig:comp}. We
+first create the intervals of reference values for the normal distribution.
+
+```{r dist.val}
+x <- seq(0.75*min(means), 1.25*max(means), by = 0.01) #---- create the x axis
+y <- dnorm(x, mean = mean.exp, sd = sd.err) #-------------- create PDF function
+```
+
+```{r dist.plot, fig.cap = "\\label{fig:comp}Comparison between the distribution of the averages and a normal distribution centered in the expected value of the mean estimator (shown in red) and a standard deviation equal to the standard error (shown in blue).", echo = FALSE}
+hist(means, prob = TRUE, xlab = "Means of the distros", main = "Avg. of 1000 distributions")
+lines(x, y, col = "red")
+abline(v = mean.exp, col = "red", lwd = 2) #------------------------ add mean
+abline(v = mean.exp + c(-1,1) * sd.err, col = "blue", lwd = 2) #---- add std
+arrows(x0 = mean.exp, y0 = 0.3, x1 = mean.exp + sd.err, y1 = 0.3, code = 3, col = "blue")
+arrows(x0 = mean.exp, y0 = 0.3, x1 = mean.exp - sd.err, y1 = 0.3, code = 3, col = "blue")
+```

@@ -1,0 +1,141 @@
+---
+title: "Brief Analysis of Tooth Growth Data"
+author: "Riccardo Finotello"
+date: "19 June 2020"
+output:
+  pdf_document: default
+  html_document:
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+In this brief analysis we consider data on the growth of odontoblasts cells in
+the teeth of guinea pigs under vitaminic treatment. We provide a short
+exploratory data analysis and compare tooth growth by **supp** and **dose**
+using basic statistical inference.
+
+## Data
+
+We first load the dataset from the `datasets` package in `R`.
+
+```{r load}
+library(data.table)
+data(ToothGrowth)
+
+dat <- data.table(ToothGrowth, stringsAsFactors = FALSE)
+names(dat) <- c("Length", "Supplement", "Dose")
+```
+
+The dataset describes the effects of the dosage of vitamin C or orange juice
+(the `Dose` column, numeric) in guinea pigs with different supplements type
+(`Supplement`, factor) on the length of teeth growth (the `Length` column,
+numeric). We provide a brief summary as a first reference:
+
+```{r summary, echo = FALSE}
+str(dat)
+```
+
+We will be interested in a twofold analysis: we will investigate the outcome of
+administering the vitamins through _orange juice_ (identified by `OJ`) or
+_vitamin C_ (`VC`) on the length of the tooth, then we will try to infer
+something more on the dosage.
+
+The data is made of both numeric and categorical variables. In particular the
+column `Supplement` can be used as a level to distinguish different treatments:
+
+```{r eda.dist}
+dat.VC <- dat[Supplement == "VC", .(Length, Dose)] # data for vitamin C
+dat.OJ <- dat[Supplement == "OJ", .(Length, Dose)] # data for orange juice
+```
+
+```{r eda, echo = FALSE, fig.cap = "\\label{fig:comp}Growth length of odontoblasts for different treatments."}
+par(mfrow = c(1,2))
+boxplot(Length ~ Dose, data = dat.VC, xlab = "Dose [mg]", main = "Growth with vitamin C")
+boxplot(Length ~ Dose, data = dat.OJ, xlab = "Dose [mg]", main = "Growth with orange juice")
+```
+
+At a visual level we can already appreciate the difference between different treatments on the length of the odontoblasts.
+
+## Effect of Supplement Type on Tooth Growth
+
+First of all we shall consider the impact of supplement type on the growth. We
+first plot the range of variation of the length per supplement type in Figure
+\ref{fig:supp}.
+
+```{r boxplot, echo = FALSE, fig.cap = "\\label{fig:supp}Growth of odontoblasts grouped by supplement type."}
+boxplot(Length ~ Supplement, data = dat, names = levels(dat$Supplement), ylab = "Length", main = "Growth of odontoblasts per supplement type")
+```
+
+It seems that the largest effect on growth is given by giving supplements of
+orange juice to the guinea pigs. We can in fact see that the mean are relevantly
+higher in this case:
+
+```{r t.test.sup, echo = FALSE}
+t.test(Length ~ Supplement, data = dat, paired = FALSE, alternative = "greater")
+```
+
+The _t test_ of unpaired, one-sided populations leads to a p-value less than
+0.05 which leads to the rejection of the null hypothesis $H_0$ (i.e. there is no
+average difference), supported also by the confidence interval of the difference
+of the means which is strictly positive: the averange growth using orange juice
+seems to be larger than using vitamin C.
+
+## Effect of Dosage of Orange Juice on Tooth Growth
+
+We then explore the impact of the dosage of orange juice on tooth growth:
+
+```{r dose.summary, echo = FALSE}
+library(knitr)
+kable(summary(dat.OJ))
+```
+
+From the plot in Figure \ref{fig:comp} we have already seen the difference in
+the outcome when different doses are administered. We then consider the average
+growth in length when using the orange juice:
+```{r dose.avg, echo = FALSE}
+data.OJ.avg <- dat.OJ[, .(Average.Length = mean(Length)), by = Dose]
+kable(data.OJ.avg)
+```
+
+The question that we ask is therefore whether a higher dosage of orange juice
+can lead to larger growths (assuming the null-hypothesis $H_0$ stating the
+opposite):
+
+```{r oj.t}
+# the test is ordered such that higher doses are the RHS,
+# thus we need the "less" alternative
+t.1 <- t.test(Length ~ Dose,
+              data = dat.OJ[Dose == 0.5 | Dose == 1.0],
+              paired = FALSE,
+              alternative = "less")
+t.2 <- t.test(Length ~ Dose,
+              data = dat.OJ[Dose == 0.5 | Dose == 2.0],
+              paired = FALSE,
+              alternative = "less")
+t.3 <- t.test(Length ~ Dose,
+              data = dat.OJ[Dose == 1.0 | Dose == 2.0],
+              paired = FALSE,
+              alternative = "less")
+
+print(paste("P-value between 0.5 mg and 1.0 mg:", t.1$p.value))
+print(paste("P-value between 0.5 mg and 2.0 mg:", t.2$p.value))
+print(paste("P-value between 1.0 mg and 2.0 mg:", t.3$p.value))
+```
+
+It seems therefore that higher doses of orange juice may lead to benefit for the
+growth in length of the odontoblasts. We can also look at the confidence
+intervals to support the conclusion. In particular between the 95% CI between
+0.5 mg and 1.0 mg is `r t.1$conf.int` and between 1.0 mg and 2.0 mg is
+`r t.3$conf.int`, which show that they do not include 0.
+
+## Conclusions
+
+From the simple data analysis we can therefore conclude that the growth of the
+odontoblasts is heavily influenced by the type of supplement and its dosage. In
+particular we showed that the best treatment for a larger growth is the
+administration of orange juice to the guinea pigs in larger quantities.
