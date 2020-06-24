@@ -1,0 +1,125 @@
+---
+title: "On Transmission Types and Mileage"
+author: "Riccardo Finotello"
+date: "24 June 2020"
+output:
+  pdf_document: default
+  html_document:
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary
+
+In this report we investigate the impact of gear transmission type on petrol
+mileage of several types of cars. The objective is to study what kind of
+transmission has the best impact on mileage (measured in miles per gallon) and
+quantify the difference between the two types.
+
+## Exploratory Data Analysis
+
+We first load the _mtcars_ dataset and look at its description and summary:
+
+```{r eda.load}
+data("mtcars")
+str(mtcars)
+```
+As we can see, the dataset is mainly composed of numerical variables and factors
+which can be used for regression.
+
+We will be interested in the `mpg` variable as dependent variable mainly as a
+function of the transmission type `am` which is a binary variable describing
+_automatic_ ($am = 0$) or _manual_ ($am = 1$) transmission type. In Figure
+\ref{fig:eda:box} we show the distribution of the dependent variable (_mpg_) as
+a function of the two types of transmission we intend to probe.
+
+In Figure \ref{fig:eda:corr} we show the correlation matrix of the variables
+together with their hierarchical structure. There are clear indications of
+interdependence between several variables.
+
+## Regression Analysis
+
+We first try, as a base model, to predict the mileage using the most correlated
+variables (we do not fit the intercept as, in this context, it has no physical
+meaning):
+
+```{r reg.fit1}
+fit.corr1 <- lm(mpg ~ cyl + disp + hp + wt + factor(cyl) -1, data = mtcars)
+summary(fit.corr1)$coef
+```
+
+As we can see most factors are relevant for the fit and we will try to keep them
+in further analysis. However the power output of the cars seems to irrelevant.
+We further investigate the impact of _hp_ on the model by comparing the results
+when we remove it from the fit:
+
+```{r reg.anova}
+fit.corr2 <- lm(mpg ~ cyl + disp + wt + factor(cyl) -1, data = mtcars)
+anova(fit.corr1, fit.corr2)
+```
+
+This shows that the variable does indeed play a role in the model.
+
+We finally investigate the impact of the transmission type on the model (we
+intentionally left it out from the previous fits in order to have a good
+background model to use for inference):
+
+```{r reg.am}
+fit <- lm(mpg ~ cyl + disp + wt + hp + factor(cyl) + factor(am), data = mtcars)
+summary(fit)$coef
+```
+
+In this case we decide to fit the intercept which represents the base estimate
+for automatic ($am = 0$) transmission. With a p-value of 0.9 and
+`r fit$df` degrees of freedom we can also say that manual transmission
+($am = 1$) has an average better impact on the petrol mileage of
+`r round(summary(fit)$coef[7,1], 1)` miles per gallon with a confidence interval of
+
+```{r reg.confint}
+confint(fit)[8,]
+```
+
+In Figure \ref{fig:reg:res} we finally show the diagnostic plots related to the
+fit we performed showing that the distribution of the residuals is indeed
+uncorrelated and no outlier issues are present.
+
+## Conclusion
+
+From the analysis it seems that manual transmission cars have a better impact
+on petrol mileage which can be quantified in $(`r round(summary(fit)$coef[7,1], 1)` \pm
+`r round(summary(fit)$coef[7,2], 1)`)$ miles per gallon.
+
+\clearpage
+
+# Appendix
+
+In this appendix we show most plots and figures associated with the analysis.
+
+The objective of the analysis is the prediction of petrol mileage as a function
+of the type of the transmission. We show the bounding boxes of such prediction
+as a reference:
+
+```{r eda.box, fig.cap="\\label{fig:eda:box}Boxplot of mileage vs type of transmission"}
+boxplot(mpg ~ factor(am, labels = c("automatic", "manual")), data = mtcars,
+        xlab = "Transmission type",
+        ylab = "Miles per Gallon",
+        main = "Mileage per Transmission Type"
+       )
+```
+
+We can then graphically show the correlation matrix of the dataset.
+
+```{r eda.corr, fig.cap="\\label{fig:eda:corr}Correlation matrix."}
+library(lattice)
+levelplot(cor(mtcars))
+```
+
+We finally show the residual plots related to the analysis:
+
+```{r reg.fit.res, fig.cap="\\label{fig:reg:res}Diagnostic plots of the fit."}
+par(mfrow=c(2,2))
+plot(fit)
+```

@@ -1,0 +1,9 @@
+*.aux
+activity_performance_cache/*
+*.fdb_latexmk
+activity_performance_files/*
+*.fls
+*.log
+*.tex
+*.xdv
+
