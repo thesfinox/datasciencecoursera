@@ -6,4 +6,5 @@ activity_performance_files/*
 *.log
 *.tex
 *.xdv
+.Rhistory
 

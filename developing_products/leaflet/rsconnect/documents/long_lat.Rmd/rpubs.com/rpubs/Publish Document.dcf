@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/632651/8dbf5e44c3564ed2a3ea9ec22497b8e4
+bundleId: https://api.rpubs.com/api/v1/document/632651/8dbf5e44c3564ed2a3ea9ec22497b8e4
+url: http://rpubs.com/thesfinox/632651
+when: 1593165498.97182

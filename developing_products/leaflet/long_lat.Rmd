@@ -1,0 +1,57 @@
+---
+title: "Countries of the World"
+author: "Riccardo Finotello"
+date: "26/06/2020"
+output:
+    html_document:
+        keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dataset Description
+
+The dataset is available on [Kaggle](https://www.kaggle.com/paultimothymooney/latitude-and-longitude-for-every-country-and-state) and contains data on longitude and latitude of all countries in the world.
+
+```{r download}
+dat <- read.csv("world_country_and_usa_states_latitude_and_longitude_values.csv")
+```
+
+The dataset is made of `r nrow(dat)` rows and `r ncol(dat)` columns containing
+the names of every country in the world and their locations:
+
+```{r show}
+library(knitr)
+kable(head(dat))
+```
+
+We will then be interested only in the columns pertaining the latitude, longitude and country names. We will disregard codes and US related data.
+
+```{r dat}
+dat <- dat[,2:4]
+```
+
+## Exploratory Data Analysis
+
+We are interested in plotting only complete cases:
+
+```{r complete}
+complete <- complete.cases(dat)
+```
+
+There are `r sum(!complete)` missing values in the dataset. We will however ignore them for the time being:
+
+```{r complete.exclude}
+dat <- dat[complete,]
+```
+
+## Data Visualisation
+
+We can then visualise each country on the map:
+
+```{r map}
+library(leaflet)
+dat[,1:2] %>% leaflet() %>% addTiles() %>% addMarkers(popup=dat$country, clusterOptions=markerClusterOptions())
+```

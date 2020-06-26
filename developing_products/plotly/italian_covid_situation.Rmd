@@ -1,0 +1,78 @@
+---
+title: "Monitoring the Italian Situation on Covid-19"
+author: "Riccardo Finotello"
+date: "26/06/2020"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+## Description
+
+### What this is about
+
+- a simple project demonstrating the use of **plot_ly** in `R`
+- an insignificant plot showing very simple data
+
+### What you should be aware of
+
+- no recommendation or assumption has been made
+- this is unrelated from finding an effective solution to a real problem
+- the situation is serious and this is not the place to discuss it
+
+## Data
+
+- data from Italian government available on [GitHub](https://github.com/pcm-dpc/COVID-19)
+
+```{r cache = TRUE}
+covid <- read.csv("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv")
+
+# change class of "data"
+covid$data <- as.Date(covid$data, "%Y-%m-%dT%H:%M:%S")
+
+# select only relevant columns
+covid <- covid[,c(1,4,5)]
+names(covid) <- c("date", "intensive", "hospital")
+
+# plot data
+library(plotly)
+days <- 1:length(covid$date)
+covid.plot <- covid %>% plot_ly(x = ~date,
+                                y = ~hospital,
+                                type="scatter",
+                                name="hospitalized",
+                                mode="lines+markers",
+                                showlegend=TRUE,
+                                text=paste(days, "days since lockdown")
+                               ) %>% 
+                        add_trace(y = ~intensive,
+                                  type="scatter",
+                                  name="intensive care",
+                                  mode="lines+markers",
+                                  showlegend=TRUE,
+                                  text=paste(days, "days since lockdown")
+                                 ) %>%
+                        layout(title="Covid-19 Monitoring",
+                               yaxis=list(type="log",
+                                          title="counts (log scale)"
+                                         ),
+                               xaxis=list(title="date (lockdown on Feb, 24th)"),
+                               hovermode="compare"
+                              )
+covid.plot
+```
+
+## Conclusions
+
+### What we can see
+
+- data show decreasing count of hospitalized people
+- intensive care seems to be relieved of some burdain
+
+### Future directions
+
+- we are still **not out of danger**
+- precautions should be taken to **avoid a stepback**
+
